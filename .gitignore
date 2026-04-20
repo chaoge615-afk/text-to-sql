@@ -23,10 +23,15 @@ env/
 # Database
 *.db
 *.duckdb
+data/
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
+github_token
+
+# Project files (local only)
+Text-to-SQL-MultiAgent-*.md
 
 # OS
 .DS_Store
@@ -34,6 +39,3 @@ Thumbs.db
 
 # Logs
 *.log
-
-# GitHub token (keep in local)
-github_token
