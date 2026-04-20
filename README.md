@@ -1,6 +1,6 @@
 # Text-to-SQL Multi-Agent System
 
-基于 CrewAI 和 MiniMax 的自然语言转 SQL 查询系统。
+基于 CrewAI 和 MiniMax 的自然语言转 SQL 查询系统，支持 Web 界面。
 
 ## 技术栈
 
@@ -10,6 +10,10 @@
 | 数据库 | DuckDB |
 | Agent 框架 | CrewAI |
 | 大模型 | MiniMax (M2.7) |
+| 前端框架 | React 18 + TypeScript |
+| 后端 API | FastAPI |
+| 构建工具 | Vite |
+| 样式 | Tailwind CSS |
 
 ## 项目结构
 
@@ -19,18 +23,26 @@ text-to-sql/
 │   ├── main.py              # CLI 入口
 │   ├── config.py            # 配置管理
 │   ├── llm_client.py        # LLM 客户端
+│   ├── api_server.py        # FastAPI HTTP 服务器
 │   ├── database/
 │   │   ├── schema.sql       # 数据库 DDL
 │   │   └── duckdb_utils.py  # 数据库工具
 │   ├── agents/
-│   │   ├── intent_agent.py    # Agent 1: 意图理解
+│   │   ├── intent_agent.py     # Agent 1: 意图理解
 │   │   ├── schema_agent.py     # Agent 2: Schema 检索
-│   │   ├── sql_gen_agent.py    # Agent 3: SQL 生成
-│   │   └── review_agent.py     # Agent 4: SQL 审查
+│   │   ├── sql_gen_agent.py     # Agent 3: SQL 生成
+│   │   └── review_agent.py      # Agent 4: SQL 审查
 │   ├── orchestrator/
 │   │   └── pipeline.py       # 主编排流程
 │   └── prompts/
 │       └── templates.py      # Prompt 模板
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # React 组件
+│   │   ├── services/         # API 服务
+│   │   ├── App.tsx           # 主应用
+│   │   └── main.tsx          # 入口
+│   └── package.json
 ├── tests/
 │   └── test_pipeline.py     # 单元测试
 ├── data/
@@ -43,7 +55,7 @@ text-to-sql/
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 安装后端依赖
 
 ```bash
 pip install -r requirements.txt
@@ -56,6 +68,8 @@ pip install -r requirements.txt
 ```env
 MINIMAX_API_KEY=your_api_key_here
 MINIMAX_BASE_URL=https://api.minimaxi.com/anthropic
+MODEL_NAME=MiniMax-M2.7
+DATABASE_PATH=./data/nutrition.db
 ```
 
 ### 3. 初始化数据库
@@ -64,14 +78,32 @@ MINIMAX_BASE_URL=https://api.minimaxi.com/anthropic
 python -m src.main --init
 ```
 
-### 4. 运行
+### 4. 启动服务
 
-**交互模式：**
+**方式一：Web 界面（推荐）**
+
+终端 1 - 启动后端 API：
+```bash
+python -m src.api_server
+```
+
+终端 2 - 启动前端：
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+然后访问 http://localhost:3000
+
+**方式二：CLI 交互模式**
+
 ```bash
 python -m src.main --interactive
 ```
 
-**单次查询：**
+**方式三：单次查询**
+
 ```bash
 python -m src.main "今天我吃了多少蛋白质？"
 ```
@@ -142,6 +174,21 @@ python -m src.main "今天我吃了多少蛋白质？"
 | food_id | INTEGER | 关联 food |
 | weight_g | INTEGER | 重量(克) |
 
+## API 接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/query` | POST | 提交查询问题 |
+| `/` | GET | 健康检查 |
+
+### 查询接口示例
+
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "今天我吃了多少蛋白质？"}'
+```
+
 ## 测试
 
 ```bash
@@ -154,14 +201,8 @@ python tests/test_pipeline.py
 # 构建镜像
 docker build -t text-to-sql .
 
-# 运行
-docker run -it text-to-sql python -m src.main --interactive
-```
-
-或使用 docker-compose：
-
-```bash
-docker-compose up --build
+# 运行后端
+docker run -p 8000:8000 text-to-sql python -m src.api_server
 ```
 
 ## 配置说明
