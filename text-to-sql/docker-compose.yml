@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  text-to-sql:
+    build: .
+    container_name: text-to-sql-agent
+    environment:
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY}
+      - MINIMAX_BASE_URL=${MINIMAX_BASE_URL:-https://api.minimax.chat}
+      - DATABASE_PATH=/app/data/nutrition.db
+    volumes:
+      - ./data:/app/data
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          memory: 2G
