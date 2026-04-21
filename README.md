@@ -184,7 +184,7 @@ python -m src.main "今天我吃了多少蛋白质？"
 ### 查询接口示例
 
 ```bash
-curl -X POST http://localhost:8000/query \
+curl -X POST http://localhost:8010/query \
   -H "Content-Type: application/json" \
   -d '{"question": "今天我吃了多少蛋白质？"}'
 ```
@@ -198,11 +198,34 @@ python tests/test_pipeline.py
 ## Docker 部署
 
 ```bash
-# 构建镜像
-docker build -t text-to-sql .
+# 构建并启动（新版 Docker）
+docker compose up --build
 
-# 运行后端
-docker run -p 8000:8000 text-to-sql python -m src.api_server
+# 旧版 Docker
+docker-compose up --build
+
+# 测试 API
+curl http://localhost:8010/
+```
+
+访问 http://localhost:3000 使用 Web 界面。
+
+### 域名访问配置
+
+如需通过域名访问，修改 `frontend/vite.config.ts` 中的 `allowedHosts`：
+
+```typescript
+server: {
+  host: '::',  // 同时监听 IPv4 和 IPv6
+  port: 3000,
+  allowedHosts: ['your-domain.com'],
+  proxy: {
+    '/query': {
+      target: 'http://localhost:8010',
+      changeOrigin: true,
+    },
+  },
+}
 ```
 
 ## 配置说明

@@ -29,7 +29,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                      API 层                                 │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │              FastAPI Server (:8000)                  │   │
+│  │              FastAPI Server (:8010)                  │   │
 │  │  - POST /query     处理查询请求                      │   │
 │  │  - GET  /          健康检查                         │   │
 │  └─────────────────────────────────────────────────────┘   │
@@ -150,9 +150,9 @@ MAX_RETRIES=3
 ```
 
 ### 端口配置
-- 后端 API: 8000
+- 后端 API: 8010
 - 前端 Dev: 3000
-- Vite 代理: /api -> http://localhost:8000
+- Vite 代理: `/query` -> `http://localhost:8010`
 
 ## 启动方式
 
@@ -190,3 +190,111 @@ docker-compose up --build
 | 2026-04-20 | 初始化项目，实现 4 个 Agent + CLI |
 | 2026-04-20 | 添加 FastAPI 服务器和 React 前端 |
 | 2026-04-20 | 推送到 GitHub master 分支 |
+| 2026-04-20 | Docker 部署配置修复与调试 |
+| 2026-04-21 | 前后端分离部署，端口改为 8010 |
+| 2026-04-21 | 前后端合并为单个 Docker 容器 |
+
+## 2026-04-21 工作记录
+
+### 已完成
+
+1. **前后端分离部署到合并**
+   - 修改端口配置：8000 → 8010
+   - 前端使用 `VITE_API_URL=http://api:8010` 访问后端
+   - 后因 Docker 网络问题，改为前后端合并到单个容器
+
+2. **前后端合并部署**
+   - 修改 Dockerfile 安装 Node.js
+   - 添加 `start.sh` 脚本同时运行 uvicorn 和 vite
+   - 前端 Vite 代理配置为 `http://localhost:8010`
+   - 解决 IPv4/IPv6 绑定问题 (`--host 0.0.0.0`)
+
+3. **API 端口问题修复**
+   - Dockerfile 中 `--host ::` 改为 `--host 0.0.0.0`
+   - 解决 Uvicorn 绑定到 IPv6 导致宿主机无法访问的问题
+
+4. **前端请求配置**
+   - `api.ts` 使用相对路径 `/` 通过 Vite 代理访问后端
+   - 避免浏览器直接访问后端跨域问题
+
+### 当前部署架构
+
+```
+┌─────────────────────────────────────┐
+│         Docker 容器 (text-to-sql-app)  │
+│                                     │
+│  ┌─────────────┐  ┌─────────────┐  │
+│  │  Vite (3000) │  │ Uvicorn     │  │
+│  │  前端开发服务器 │  │ (8010)     │  │
+│  └──────┬──────┘  └──────┬──────┘  │
+│         │                │         │
+│         └──────┬─────────┘         │
+│              localhost              │
+└─────────────────────────────────────┘
+         │                │
+         ▼                ▼
+   http://localhost:3000  http://localhost:8010
+```
+
+### 剩余问题
+
+#### 1. MiniMax API 服务器过载 (间歇性)
+- **现象**: 返回 `overloaded_error` (529 错误)
+- **原因**: MiniMax API 服务端负载过高
+- **影响**: 查询请求会返回"服务暂时繁忙"错误
+- **解决**: 等待 MiniMax 服务恢复后重试
+
+### 已解决
+
+#### 2. 前端域名访问限制
+- **现象**: 浏览器访问域名时报错 `Blocked request. This host is not allowed`
+- **原因**: Vite 默认不允许非 localhost 域名访问
+- **解决**: 在 `vite.config.ts` 中添加 `allowedHosts` 配置，支持 IPv4/IPv6 双栈监听
+
+```typescript
+server: {
+  host: '::',  // 同时监听 IPv4 和 IPv6
+  port: 3000,
+  allowedHosts: ['www.speedtest.ah.cn', 'speedtest.ah.cn'],
+  proxy: {
+    '/query': {
+      target: 'http://localhost:8010',
+      changeOrigin: true,
+    },
+  },
+}
+```
+
+### 当前配置
+
+**.env 配置**:
+```env
+MINIMAX_API_KEY=<your_key>
+MINIMAX_BASE_URL=https://api.minimaxi.com/anthropic
+MODEL_NAME=MiniMax-M2.7
+DATABASE_PATH=./data/nutrition.db
+MAX_RETRIES=3
+```
+
+**端口配置**:
+- 后端 API: 8010
+- 前端 Dev: 3000
+- Vite 代理: `/query` → `http://localhost:8010`
+
+### 启动命令
+
+```bash
+# 前后端合并启动 (新版 Docker)
+docker compose up --build
+
+# 旧版 Docker
+docker-compose up --build
+
+# 测试 API
+curl http://localhost:8010/
+
+# 测试查询
+curl -X POST http://localhost:8010/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "今天我吃了多少蛋白质？"}'
+```
