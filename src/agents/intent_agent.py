@@ -1,6 +1,7 @@
 """Intent Understanding Agent - Agent 1."""
 
 import json
+from datetime import date
 from langchain_core.messages import HumanMessage, SystemMessage
 
 import sys
@@ -18,8 +19,13 @@ class IntentAgent:
 
     def parse(self, question: str) -> dict:
         """Parse user question into structured intent."""
+        today = date.today()
+        system_prompt = INTENT_SYSTEM_PROMPT.format(
+            current_date=today.isoformat(),
+            current_year=today.year
+        )
         messages = [
-            SystemMessage(content=INTENT_SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt),
             HumanMessage(content=INTENT_USER_PROMPT.format(question=question)),
         ]
 
