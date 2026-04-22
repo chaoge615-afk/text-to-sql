@@ -29,11 +29,16 @@ INTENT_SYSTEM_PROMPT = """你是一个意图理解专家。你的任务是将用
     }}
 }}
 
+## 重要规则
+- 如果用户没有指定年份，使用当前年份（2026年）
+- 例如用户说"三月一日"，应解析为 2026-03-01
+- time_range 中的日期使用 ISO 格式 YYYY-MM-DD
+
 ## 注意事项
 - 如果用户没有指定聚合方式，默认使用 sum
 - 如果问题涉及"够不够"、"是否达标"等，compare_with_target 必须为 true
-- time_range 中的日期使用 ISO 格式 YYYY-MM-DD
-- 所有日期必须使用当前年份 {current_year}，不要使用其他年份
+- 如果用户没有指定年份，使用当前年份 {current_year}
+- 例如用户说"三月一日"，应解析为 {current_year}-03-01
 """
 
 INTENT_USER_PROMPT = """将以下自然语言问题转换为结构化查询需求：

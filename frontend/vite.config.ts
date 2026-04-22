@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     host: '::',
     port: 3000,
-    allowedHosts: ['www.speedtest.ah.cn', 'speedtest.ah.cn'],
+    allowedHosts: true,
     proxy: {
       '/query': {
         target: 'http://localhost:8010',
